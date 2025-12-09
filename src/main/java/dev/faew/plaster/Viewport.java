@@ -10,7 +10,7 @@ public class Viewport extends JPanel {
     private final int width, height;
     private Scene scene = null;
 
-    private final int[] ftBuffer = new int[1000];
+    private final int[] ftBuffer = new int[100];
     private int ftPtr;
 
     public Viewport(int width, int height, int pixelScale) {
@@ -42,6 +42,7 @@ public class Viewport extends JPanel {
 
             if (ftPtr >= ftBuffer.length) ftPtr = 0;
             ftBuffer[ftPtr] = frameTime;
+
             int max = 0;
             for (int j : ftBuffer) {
                 if (j > max) max = j;
@@ -53,7 +54,7 @@ public class Viewport extends JPanel {
                 int ft = (int)((ftBuffer[f] / (double)max) * barHeight);
                 g2.setColor(Color.BLUE);
                 g2.setStroke(new BasicStroke(1));
-                g2.drawLine(width - i, barHeight, width - i, barHeight - ft);
+                g2.drawLine(i, barHeight, i, barHeight - ft);
             }
 
             ftPtr += 1;
