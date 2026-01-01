@@ -16,6 +16,7 @@ public class Scene {
     private Matrix33 cameraRotation = Matrix33.identity();
 
     private final List<Shape> shapes = new ArrayList<>();
+    private final List<Light> lights = new ArrayList<>();
 
     public void lookAt(Vec3 target, Vec3 from) {
         final var forward = from.subtract(target).normalize();
@@ -47,6 +48,10 @@ public class Scene {
         shapes.add(shape);
     }
 
+    public void addLight(Light light) {
+        lights.add(light);
+    }
+
     public BufferedImage render(int width, int height) {
         final var offset = new Vec3(width / 2.0, height / 2.0, 0);
         final var img = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
@@ -57,7 +62,7 @@ public class Scene {
         final var cameraTransform = Matrix44.fromPosRot(cameraPosition, cameraRotation);
 
         for (Shape s : shapes) {
-            s.render(img, zBuffer, offset, cameraTransform);
+            s.render(img, zBuffer, offset, cameraTransform, lights);
         }
 
         return img;

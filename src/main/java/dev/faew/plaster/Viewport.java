@@ -29,7 +29,7 @@ public class Viewport extends JPanel {
     public void paintComponent(Graphics g) {
         final var start = System.nanoTime();
         final var g2 = (Graphics2D) g;
-        g2.setColor(Color.BLACK);
+        g2.setColor(java.awt.Color.BLACK);
         g2.fillRect(0, 0, getWidth(), getHeight());
 
         if (scene != null) {
@@ -52,14 +52,14 @@ public class Viewport extends JPanel {
             for (int i = 0; i < ftBuffer.length; i++) {
                 int f = (i + ftPtr) % ftBuffer.length;
                 int ft = (int)((ftBuffer[f] / (double)max) * barHeight);
-                g2.setColor(Color.BLUE);
+                g2.setColor(java.awt.Color.BLUE);
                 g2.setStroke(new BasicStroke(1));
                 g2.drawLine(i, barHeight, i, barHeight - ft);
             }
 
             ftPtr += 1;
 
-            g2.setColor(Color.WHITE);
+            g2.setColor(java.awt.Color.WHITE);
             g2.drawString(Plaster.FPS + "fps", 0, 10);
             g2.drawString(frameTime + "μs", 0, 20);
         }

@@ -1,10 +1,12 @@
 package dev.faew.plaster.geom.shape;
 
+import dev.faew.plaster.Light;
 import dev.faew.plaster.geom.Matrix33;
 import dev.faew.plaster.geom.Matrix44;
 import dev.faew.plaster.geom.Vec3;
 
 import java.awt.image.BufferedImage;
+import java.util.List;
 
 public abstract class AbstractShape implements Shape {
 
@@ -23,7 +25,7 @@ public abstract class AbstractShape implements Shape {
     }
 
     @Override
-    public abstract void render(BufferedImage img, double[] zBuffer, Vec3 offset, Matrix44 cameraTransform);
+    public abstract void render(BufferedImage img, double[] zBuffer, Vec3 offset, Matrix44 cameraTransform, List<Light> lights);
 
     private void updateTransform() {
         this.transform = Matrix44.fromPosRot(position, rotation);
