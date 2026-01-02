@@ -1,4 +1,6 @@
-package dev.faew.plaster;
+package dev.faew.plaster.material;
+
+import dev.faew.plaster.util.Color;
 
 public class DebugMaterial implements Material {
 

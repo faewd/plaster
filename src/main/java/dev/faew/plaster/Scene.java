@@ -1,70 +1,63 @@
 package dev.faew.plaster;
 
-import dev.faew.plaster.geom.Matrix33;
-import dev.faew.plaster.geom.Matrix44;
-import dev.faew.plaster.geom.Vec3;
-import dev.faew.plaster.geom.shape.Shape;
+import dev.faew.plaster.lighting.Light;
+import dev.faew.plaster.lighting.LightSource;
+import dev.faew.plaster.objects.GameObject;
 
-import java.awt.image.BufferedImage;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class Scene {
 
-    private Vec3 cameraPosition = Vec3.zero();
-    private Matrix33 cameraRotation = Matrix33.identity();
+    private final Camera camera = new Camera();
 
-    private final List<Shape> shapes = new ArrayList<>();
+    private final List<GameObject> objects = new ArrayList<>();
+
     private final List<Light> lights = new ArrayList<>();
+    private final Map<GameObject, Light> lightMap = new HashMap<>();
 
-    public void lookAt(Vec3 target, Vec3 from) {
-        final var forward = from.subtract(target).normalize();
-        final var right = new Vec3(0, 1, 0).cross(forward).normalize();
-        final var up = forward.cross(right).normalize();
+    public final List<GameObject> objectsToRemove = new ArrayList<>();
 
-        setCameraPosition(new Vec3(
-                -right.dot(from),
-                -up.dot(from),
-                -forward.dot(from)
-        ));
-
-        setCameraRotation(new Matrix33(
-                right.x, right.y, right.z,
-                up.x, up.y, up.z,
-                forward.x, forward.y, forward.z
-        ));
+    public Camera getCamera() {
+        return camera;
     }
 
-    public void setCameraPosition(Vec3 cameraPosition) {
-        this.cameraPosition = cameraPosition;
+    public void add(GameObject object) {
+        objects.add(object);
+
+        if (object instanceof LightSource ls) {
+            final var light = new Light(object.getTransform(), ls.getRadius(), ls.getIntensity());
+            lights.add(light);
+            lightMap.put(object, light);
+        }
     }
 
-    public void setCameraRotation(Matrix33 cameraRotation) {
-        this.cameraRotation = cameraRotation;
+    public void remove(GameObject object) {
+        objectsToRemove.add(object);
     }
 
-    public void addShape(Shape shape) {
-        shapes.add(shape);
-    }
-
-    public void addLight(Light light) {
-        lights.add(light);
-    }
-
-    public BufferedImage render(int width, int height) {
-        final var offset = new Vec3(width / 2.0, height / 2.0, 0);
-        final var img = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-
-        double[] zBuffer = new double[img.getWidth() * img.getHeight()];
-        Arrays.fill(zBuffer, Double.NEGATIVE_INFINITY);
-
-        final var cameraTransform = Matrix44.fromPosRot(cameraPosition, cameraRotation);
-
-        for (Shape s : shapes) {
-            s.render(img, zBuffer, offset, cameraTransform, lights);
+    public void tick(double delta) {
+        for (var object : objects) {
+            if (objectsToRemove.contains(object)) continue;
+            object.tick(delta);
         }
 
-        return img;
+        for (var object : objectsToRemove) {
+            objects.remove(object);
+            if (lightMap.containsKey(object)) {
+                final var light = lightMap.get(object);
+                lights.remove(light);
+            }
+        }
+        objectsToRemove.clear();
+    }
+
+    public void render(Frame frame) {
+        Arrays.fill(frame.zBuffer(), Double.NEGATIVE_INFINITY);
+
+        final var cameraTransform = camera.getTransform();
+
+        for (var object : objects) {
+            object.render(frame, cameraTransform, lights);
+        }
     }
 }

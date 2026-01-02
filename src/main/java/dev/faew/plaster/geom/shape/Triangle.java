@@ -1,14 +1,14 @@
 package dev.faew.plaster.geom.shape;
 
-import dev.faew.plaster.Color;
-import dev.faew.plaster.Light;
-import dev.faew.plaster.Material;
-import dev.faew.plaster.Plaster;
+import dev.faew.plaster.Frame;
 import dev.faew.plaster.geom.Matrix44;
 import dev.faew.plaster.geom.Vec2;
 import dev.faew.plaster.geom.Vec3;
+import dev.faew.plaster.lighting.Light;
+import dev.faew.plaster.material.Material;
+import dev.faew.plaster.util.Color;
+import dev.faew.plaster.util.Config;
 
-import java.awt.image.BufferedImage;
 import java.util.List;
 
 public class Triangle extends AbstractShape {
@@ -16,8 +16,8 @@ public class Triangle extends AbstractShape {
     private final Vec2 uvA, uvB, uvC;
     private final Material material;
 
-    public Triangle(Vec3 position, Vec3 a, Vec3 b, Vec3 c, Vec2 uvA, Vec2 uvB, Vec2 uvC, Material material) {
-        super(position);
+    public Triangle(Matrix44 transform, Vec3 a, Vec3 b, Vec3 c, Vec2 uvA, Vec2 uvB, Vec2 uvC, Material material) {
+        super(transform);
         this.a = a;
         this.b = b;
         this.c = c;
@@ -28,7 +28,9 @@ public class Triangle extends AbstractShape {
     }
 
     @Override
-    public void render(BufferedImage img, double[] zBuffer, Vec3 offset, Matrix44 cameraTransform, List<Light> lights) {
+    public void render(Frame frame, Matrix44 cameraTransform, List<Light> lights) {
+        final var config = Config.getInstance();
+
         final var worldTransform = getTransform();
 
         final var worldA = this.a.multiply(worldTransform);
@@ -39,31 +41,33 @@ public class Triangle extends AbstractShape {
         final var normal = AB.cross(AC).normalize();
 
         final var transform = cameraTransform.multiply(worldTransform);
-        final var a = this.a.multiply(transform).multiply(1d / Plaster.SCALE);
-        final var b = this.b.multiply(transform).multiply(1d / Plaster.SCALE);
-        final var c = this.c.multiply(transform).multiply(1d / Plaster.SCALE);
+        final var scale = config.getPixelScale();
+        final var a = this.a.multiply(transform).multiply(1d / scale);
+        final var b = this.b.multiply(transform).multiply(1d / scale);
+        final var c = this.c.multiply(transform).multiply(1d / scale);
 
-        a.x = a.x / (-a.z) * Plaster.FOV;
-        a.y = a.y / (-a.z) * Plaster.FOV;
-        b.x = b.x / (-b.z) * Plaster.FOV;
-        b.y = b.y / (-b.z) * Plaster.FOV;
-        c.x = c.x / (-c.z) * Plaster.FOV;
-        c.y = c.y / (-c.z) * Plaster.FOV;
+        final var fov = config.getFov();
+        a.x = a.x / (-a.z) * fov;
+        a.y = a.y / (-a.z) * fov;
+        b.x = b.x / (-b.z) * fov;
+        b.y = b.y / (-b.z) * fov;
+        c.x = c.x / (-c.z) * fov;
+        c.y = c.y / (-c.z) * fov;
 
-        a.x += offset.x;
-        a.y += offset.y;
-        b.x += offset.x;
-        b.y += offset.y;
-        c.x += offset.x;
-        c.y += offset.y;
+        a.x += frame.offset().x;
+        a.y += frame.offset().y;
+        b.x += frame.offset().x;
+        b.y += frame.offset().y;
+        c.x += frame.offset().x;
+        c.y += frame.offset().y;
 
         final var triangleArea = (a.y - c.y) * (b.x - c.x) + (b.y - c.y) * (c.x - a.x);
         if (triangleArea <= 0) return;
 
         final var minX = (int) Math.max(0, Math.ceil(Math.min(a.x, Math.min(b.x, c.x))));
-        final var maxX = (int) Math.min(img.getWidth() - 1, Math.floor(Math.max(a.x, Math.max(b.x, c.x))));
+        final var maxX = (int) Math.min(frame.img().getWidth() - 1, Math.floor(Math.max(a.x, Math.max(b.x, c.x))));
         final var minY = (int) Math.max(0, Math.ceil(Math.min(a.y, Math.min(b.y, c.y))));
-        final var maxY = (int) Math.min(img.getHeight() - 1, Math.floor(Math.max(a.y, Math.max(b.y, c.y))));
+        final var maxY = (int) Math.min(frame.img().getHeight() - 1, Math.floor(Math.max(a.y, Math.max(b.y, c.y))));
 
         for (int y = minY; y <= maxY; y++) {
             for (int x = minX; x <= maxX; x++) {
@@ -75,8 +79,8 @@ public class Triangle extends AbstractShape {
 
                     double depth = b1 * a.z + b2 * b.z + b3 * c.z;
                     if (depth > 0) continue;
-                    int zIndex = y * img.getWidth() + x;
-                    if (zBuffer[zIndex] < depth) {
+                    int zIndex = y * frame.img().getWidth() + x;
+                    if (frame.zBuffer()[zIndex] < depth) {
 
                         double w = 1.0 / (b1 / a.z + b2 / b.z + b3 / c.z);
                         double u = w * (b1 * uvA.x / a.z + b2 * uvB.x / b.z + b3 * uvC.x / c.z);
@@ -88,36 +92,42 @@ public class Triangle extends AbstractShape {
                                 b1 * worldA.z + b2 * worldB.z + b3 * worldC.z
                         );
 
-                        double lightLevel = Plaster.GLOBAL_ILLUMINATION;
+                        double lightLevel = config.getGlobalIllumination();
 
-                        for (var light : lights) {
-                            final var ray = pos.subtract(light.getPosition());
-                            final var dist = ray.length();
+                        Color col;
 
-                            final var cosTheta = ray.normalize().dot(normal);
-                            final var r = light.getRadius();
-                            if (cosTheta <= 0 || dist > r) continue;
-                            final var rd = (dist / r);
-                            final var lightContribution = (1 - (rd * rd)) * light.getIntensity() * cosTheta;
-                            lightLevel = Math.min(1, lightLevel + lightContribution);
+                        if (material.isEmissive(u, v, 1)) {
+                            col = material.getColor(u, v, 1);
+                        } else {
+                            for (var light : lights) {
+                                final var ray = pos.subtract(light.transform().getPosition());
+                                final var dist = ray.length();
+
+                                final var cosTheta = ray.normalize().dot(normal);
+                                final var r = light.radius();
+                                if (cosTheta <= 0 || dist > r) continue;
+                                final var rd = (dist / r);
+                                final var lightContribution = (1 - (rd * rd)) * light.intensity() * cosTheta;
+                                lightLevel = Math.min(1, lightLevel + lightContribution);
+                            }
+
+                            final var BANDS = 4;
+                            final var band = 1 - Math.floor(lightLevel * BANDS) / (double)BANDS;
+                            final var nextBand = 1 - Math.floor(lightLevel * BANDS + 1) / (double)BANDS;
+                            final var relativeLight = lightLevel * BANDS % 1;
+                            final var shadowOpacity = lightLevel >= 1 ? 0
+                                    : lightLevel <= 0 ? 1
+                                    : dither(x, y, relativeLight) ? nextBand
+                                    : band;
+
+                            col = Color.composite(
+                                    material.getColor(u, v, 1),
+                                    Color.BLACK.withOpacity(shadowOpacity)
+                            );
                         }
 
-                        final var BANDS = 4;
-                        final var band = 1 - Math.floor(lightLevel * BANDS) / (double)BANDS;
-                        final var nextBand = 1 - Math.floor(lightLevel * BANDS + 1) / (double)BANDS;
-                        final var relativeLight = lightLevel * BANDS % 1;
-                        final var shadowOpacity = lightLevel >= 1 ? 0
-                                : lightLevel <= 0 ? 1
-                                : dither(x, y, relativeLight) ? nextBand
-                                : band;
-
-                        final var col = Color.composite(
-                                material.getColor(u, v, 1),
-                                Color.BLACK.withOpacity(shadowOpacity)
-                        );
-
-                        img.setRGB(x, y, col.value());
-                        zBuffer[zIndex] = depth;
+                        frame.img().setRGB(x, y, col.value());
+                        frame.zBuffer()[zIndex] = depth;
                     }
                 }
             }

@@ -1,24 +1,33 @@
 package dev.faew.plaster;
 
+import dev.faew.plaster.geom.Vec3;
+import dev.faew.plaster.util.Config;
+import dev.faew.plaster.util.Timer;
+
 import javax.swing.*;
 import java.awt.*;
+import java.awt.image.BufferedImage;
 
 public class Viewport extends JPanel {
 
-    private static final boolean DEBUG = true;
-
     private final int width, height;
+
     private Scene scene = null;
 
     private final int[] ftBuffer = new int[100];
     private int ftPtr;
 
-    public Viewport(int width, int height, int pixelScale) {
+    public Viewport() {
         super();
-        this.setSize(width * pixelScale, height * pixelScale);
+        final var config = Config.getInstance();
 
-        this.width = width;
-        this.height = height;
+        final var width = config.getWidth();
+        final var height = config.getHeight();
+        this.setSize(width, height);
+
+        final var scale = config.getPixelScale();
+        this.width = width / scale;
+        this.height = height / scale;
     }
 
     public void setScene(Scene scene) {
@@ -33,11 +42,15 @@ public class Viewport extends JPanel {
         g2.fillRect(0, 0, getWidth(), getHeight());
 
         if (scene != null) {
-            final var img = scene.render(width, height).getScaledInstance(getWidth(), getHeight(), Image.SCALE_FAST);
-            g2.drawImage(img, 0, 0, null);
+            final var img = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+            double[] zBuffer = new double[img.getWidth() * img.getHeight()];
+            final var offset = new Vec3(width / 2.0, height / 2.0, 0);
+            final var frame = new Frame(img, zBuffer, offset);
+            scene.render(frame);
+            g2.drawImage(img.getScaledInstance(getWidth(), getHeight(), Image.SCALE_FAST), 0, 0, null);
         }
 
-        if (DEBUG) {
+        if (Config.getInstance().getDebug()) {
             final var frameTime = (int)((System.nanoTime() - start) / 1000);
 
             if (ftPtr >= ftBuffer.length) ftPtr = 0;
@@ -60,7 +73,7 @@ public class Viewport extends JPanel {
             ftPtr += 1;
 
             g2.setColor(java.awt.Color.WHITE);
-            g2.drawString(Plaster.FPS + "fps", 0, 10);
+            g2.drawString(Timer.getInstance().getFPS() + "fps", 0, 10);
             g2.drawString(frameTime + "μs", 0, 20);
         }
     }

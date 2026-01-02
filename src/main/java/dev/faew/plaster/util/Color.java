@@ -1,4 +1,4 @@
-package dev.faew.plaster;
+package dev.faew.plaster.util;
 
 public class Color {
 

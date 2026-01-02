@@ -1,24 +1,24 @@
 package dev.faew.plaster.geom.shape;
 
-import dev.faew.plaster.Color;
-import dev.faew.plaster.DebugMaterial;
-import dev.faew.plaster.Light;
+import dev.faew.plaster.Frame;
 import dev.faew.plaster.geom.Matrix44;
 import dev.faew.plaster.geom.Vec2;
 import dev.faew.plaster.geom.Vec3;
+import dev.faew.plaster.lighting.Light;
+import dev.faew.plaster.material.DebugMaterial;
+import dev.faew.plaster.util.Color;
 
-import java.awt.image.BufferedImage;
 import java.util.List;
 
 public class Tet extends AbstractShape {
 
     private final Triangle[] faces;
 
-    public Tet(Vec3 position, double s) {
-        super(position);
+    public Tet(Matrix44 transform, double s) {
+        super(transform);
         this.faces = new Triangle[] {
                 new Triangle(
-                        position,
+                        transform,
                         new Vec3(s, s, s),
                         new Vec3(-s, -s, s),
                         new Vec3(-s, s, -s),
@@ -28,7 +28,7 @@ public class Tet extends AbstractShape {
                         new DebugMaterial(Color.WHITE)
                 ),
                 new Triangle(
-                        position,
+                        transform,
                         new Vec3(s, s, s),
                         new Vec3(-s, -s, s),
                         new Vec3(s, -s, -s),
@@ -38,7 +38,7 @@ public class Tet extends AbstractShape {
                         new DebugMaterial(Color.RED)
                 ),
                 new Triangle(
-                        position,
+                        transform,
                         new Vec3(-s, s, -s),
                         new Vec3(s, -s, -s),
                         new Vec3(s, s, s),
@@ -48,7 +48,7 @@ public class Tet extends AbstractShape {
                         new DebugMaterial(Color.GREEN)
                 ),
                 new Triangle(
-                        position,
+                        transform,
                         new Vec3(-s, s, -s),
                         new Vec3(s, -s, -s),
                         new Vec3(-s, -s, s),
@@ -61,17 +61,9 @@ public class Tet extends AbstractShape {
     }
 
     @Override
-    public void render(BufferedImage img, double[] zBuffer, Vec3 offset, Matrix44 cameraTransform, List<Light> lights) {
+    public void render(Frame frame, Matrix44 cameraTransform, List<Light> lights) {
         for (var face : faces) {
-            face.render(img, zBuffer, offset, cameraTransform, lights);
-        }
-    }
-
-    @Override
-    public void setTransform(Matrix44 transform) {
-        super.setTransform(transform);
-        for (var face : faces) {
-            face.setTransform(transform);
+            face.render(frame, cameraTransform, lights);
         }
     }
 }

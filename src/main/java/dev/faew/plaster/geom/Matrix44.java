@@ -1,10 +1,10 @@
 package dev.faew.plaster.geom;
 
 public class Matrix44 {
-    public final double m00, m01, m02, m03,
-                        m10, m11, m12, m13,
-                        m20, m21, m22, m23,
-                        m30, m31, m32, m33;
+    public double m00, m01, m02, m03,
+                  m10, m11, m12, m13,
+                  m20, m21, m22, m23,
+                  m30, m31, m32, m33;
 
     public Matrix44(double m00, double m01, double m02, double m03,
                     double m10, double m11, double m12, double m13,
@@ -48,8 +48,27 @@ public class Matrix44 {
         );
     }
 
-    public Vec3 getTranslation() {
+    public void setRotation(Matrix33 rotation) {
+        this.m00 = rotation.a; this.m01 = rotation.b; this.m02 = rotation.c;
+        this.m10 = rotation.d; this.m11 = rotation.e; this.m12 = rotation.f;
+        this.m20 = rotation.g; this.m21 = rotation.h; this.m22 = rotation.i;
+    }
+
+    public Vec3 getPosition() {
         return new Vec3(m03, m13, m23);
+    }
+
+    public void setPosition(Vec3 position) {
+        this.m03 = position.x;
+        this.m13 = position.y;
+        this.m23 = position.z;
+    }
+
+    public void set(Matrix44 o) {
+        this.m00 = o.m00; this.m01 = o.m01; this.m02 = o.m02; this.m03 = o.m03;
+        this.m10 = o.m10; this.m11 = o.m11; this.m12 = o.m12; this.m13 = o.m13;
+        this.m20 = o.m20; this.m21 = o.m21; this.m22 = o.m22; this.m23 = o.m23;
+        this.m30 = o.m30; this.m31 = o.m31; this.m32 = o.m32; this.m33 = o.m33;
     }
 
     public static Matrix44 identity() {
@@ -57,6 +76,33 @@ public class Matrix44 {
                 1, 0, 0, 0,
                 0, 1, 0, 0,
                 0, 0, 1, 0,
+                0, 0, 0, 1
+        );
+    }
+
+    public static Matrix44 from(Vec3 position) {
+        return new Matrix44(
+                1, 0, 0, position.x,
+                0, 1, 0, position.y,
+                0, 0, 1, position.z,
+                0, 0, 0, 1
+        );
+    }
+
+    public static Matrix44 from(Matrix33 rot) {
+        return new Matrix44(
+                rot.a, rot.b, rot.c, 0,
+                rot.d, rot.e, rot.f, 0,
+                rot.g, rot.h, rot.i, 0,
+                0, 0, 0, 1
+        );
+    }
+
+    public static Matrix44 from(Vec3 pos, Matrix33 rot) {
+        return new Matrix44(
+                rot.a, rot.b, rot.c, pos.x,
+                rot.d, rot.e, rot.f, pos.y,
+                rot.g, rot.h, rot.i, pos.z,
                 0, 0, 0, 1
         );
     }
@@ -89,15 +135,6 @@ public class Matrix44 {
         return yawTransform
                 .multiply(pitchTransform)
                 .multiply(rollTransform);
-    }
-
-    public static Matrix44 fromPosRot(Vec3 pos, Matrix33 rot) {
-        return new Matrix44(
-                rot.a, rot.b, rot.c, pos.x,
-                rot.d, rot.e, rot.f, pos.y,
-                rot.g, rot.h, rot.i, pos.z,
-                0, 0, 0, 1
-        );
     }
 
     public static Matrix44 translation(Vec3 pos) {
